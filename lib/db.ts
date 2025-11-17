@@ -1,15 +1,38 @@
 import fs from 'fs'
 import path from 'path'
 
-const dataDir = path.join(process.cwd(), 'data')
+// Use /tmp in serverless environments (Netlify, Vercel, etc.), otherwise use project root
+const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+const dataDir = isServerless 
+  ? '/tmp/data' 
+  : path.join(process.cwd(), 'data')
+
 const teamsFile = path.join(dataDir, 'teams.json')
 const challengeAccessFile = path.join(dataDir, 'challenge_access.json')
 const ctfAttemptsFile = path.join(dataDir, 'ctf_attempts.json')
 const hintPurchasesFile = path.join(dataDir, 'hint_purchases.json')
 
 // Ensure data directory exists
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true })
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
+  }
+} catch (error) {
+  // If we can't create the directory, try /tmp as fallback
+  if (!isServerless) {
+    const fallbackDir = '/tmp/data'
+    if (!fs.existsSync(fallbackDir)) {
+      fs.mkdirSync(fallbackDir, { recursive: true })
+    }
+    // Update paths to use fallback
+    const fallbackTeamsFile = path.join(fallbackDir, 'teams.json')
+    const fallbackChallengeAccessFile = path.join(fallbackDir, 'challenge_access.json')
+    const fallbackCtfAttemptsFile = path.join(fallbackDir, 'ctf_attempts.json')
+    const fallbackHintPurchasesFile = path.join(fallbackDir, 'hint_purchases.json')
+    
+    // Note: This is a workaround - in production you should use a database
+    console.warn('Using /tmp for data storage - data will not persist between deployments')
+  }
 }
 
 // Initialize files if they don't exist
