@@ -96,11 +96,8 @@ export default function DashboardPage() {
     return null
   }
 
-  // Calculate rank - test team won't be in leaderboard, so don't show rank
-  const isTestTeam = team.name.toLowerCase() === 'test'
-  const teamRank = isTestTeam 
-    ? null 
-    : (leaderboard.findIndex((t) => t.id === team.id) + 1 || leaderboard.length + 1)
+  const teamRank =
+    leaderboard.findIndex((t) => t.id === team.id) + 1 || leaderboard.length + 1
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 p-4">
@@ -129,11 +126,9 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 rounded-lg font-bold text-xl">
               🏆 {team.total_points} Points
             </div>
-            {teamRank !== null && (
-              <div className="bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-3 rounded-lg font-bold text-xl">
-                📊 Rank #{teamRank}
-              </div>
-            )}
+            <div className="bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-3 rounded-lg font-bold text-xl">
+              📊 Rank #{teamRank}
+            </div>
           </div>
         </div>
 

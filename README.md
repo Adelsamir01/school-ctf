@@ -4,13 +4,12 @@ A friendly, web-based Capture The Flag platform designed for school-age students
 
 ## Features
 
-- 🎯 Event-based system with password protection
-- 👥 Team registration with simple team name entry
-- 🔒 Password-protected events containing multiple challenges
+- 🎯 Team registration with simple team name entry
+- 🔒 Password-protected challenges containing multiple CTFs
 - ⏱️ Timer tracking for each CTF attempt
-- 🏆 Real-time leaderboard showing all teams (sorted by points, then time)
-- 💰 Points system for completed CTFs (teams start with 60 points)
-- 💡 Hint system with point costs (Hint 1: 10pts, Hint 2: 20pts, etc.)
+- 🏆 Real-time leaderboard showing all teams
+- 💰 Points system for completed CTFs
+- 💡 Hint system for each CTF
 - 🎨 Youth-friendly, colorful UI
 
 ## Getting Started
@@ -37,10 +36,9 @@ npm run dev
 ## Project Structure
 
 ```
-/events.json              # Event configurations (name, password, date, location)
 /challenges/
   /[challenge-name]/
-    config.json          # Challenge configuration (name, description)
+    config.json          # Challenge configuration (name, description, password)
     /ctfs/
       /[ctf-name]/
         config.json      # CTF configuration (title, description, points, flag, hints, links)
@@ -48,25 +46,10 @@ npm run dev
 
 /app/
   /api/                  # API routes
-  /event/                # Event password entry
   /dashboard/            # Team dashboard
   /join/                 # Team registration
-  /challenge/[id]/       # Challenge CTF listing
+  /challenge/[id]/       # Challenge password entry and CTF listing
   /challenge/[id]/ctf/[ctfId]/  # Individual CTF page
-```
-
-## Adding Events
-
-Edit `events.json`:
-```json
-{
-  "id": "event-id",
-  "name": "Event Name",
-  "date": "Date",
-  "location": "Location",
-  "password": "event_password",
-  "description": "Description"
-}
 ```
 
 ## Adding Challenges
@@ -77,7 +60,8 @@ Edit `events.json`:
 {
   "id": "my-challenge",
   "name": "My Challenge Name",
-  "description": "Description of the challenge"
+  "description": "Description of the challenge",
+  "password": "your_password_here"
 }
 ```
 
@@ -99,11 +83,12 @@ Edit `events.json`:
 ## Example Challenge
 
 The platform includes an example "Cryptography Challenge" with a Caesar cipher CTF:
+- Challenge password: `crypto2024`
 - CTF flag: `FLAG{THE STUDENT WHO CAN SOLVE THIS}`
 
 ## Database
 
-The platform uses JSON file-based storage for development. **For production deployment (especially on Netlify), you'll need to migrate to a database.** See `DEPLOYMENT.md` for details.
+The platform uses SQLite for data storage. The database file (`ctf.db`) is automatically created on first run.
 
 ## Development
 
@@ -112,18 +97,11 @@ The platform uses JSON file-based storage for development. **For production depl
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
 
-## Deployment
-
-See `DEPLOYMENT.md` for Netlify deployment instructions.
-
 ## Notes
 
-- Teams are identified by cookies (team_id and event_id)
-- Event passwords are stored in events.json
+- Teams are identified by cookies (team_id)
+- Challenge passwords are hardcoded in config.json files
 - CTF flags are case-sensitive
 - Timer starts automatically when a team views a CTF
 - Points are awarded only on first correct submission
-- Teams start with 60 points
-- Hints cost: Hint 1 = 10pts, Hint 2 = 20pts, Hint 3 = 30pts, etc.
-- Leaderboard ranks by points, then by total time (lower time wins ties)
-# school-ctf
+

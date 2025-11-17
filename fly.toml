@@ -1,0 +1,26 @@
+# fly.toml app configuration file generated for school-ctf on 2024-11-17T18:00:00Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "school-ctf"
+primary_region = "iad"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory_mb = 256
+  cpu_kind = "shared"
+  cpus = 1
+
