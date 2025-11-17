@@ -1,0 +1,17 @@
+{
+  "id": "caesar-cipher",
+  "title": "Caesar Cipher",
+  "description": "The Caesar cipher is one of the earliest known encryption techniques. It works by shifting each letter in the alphabet by a fixed number of positions. For example, with a shift of 3, 'A' becomes 'D', 'B' becomes 'E', and so on.\n\nYour task: Decode the following encrypted message:\n\nzhoogrqhwhdp\n\nHint: Try different shift values! The flag format is FLAG{decrypted_text}",
+  "points": 100,
+  "photo": null,
+  "links": [
+    "https://en.wikipedia.org/wiki/Caesar_cipher"
+  ],
+  "hints": [
+    "The shift might be a number between 1 and 25",
+    "Try shifting backwards through the alphabet",
+    "Count how many positions each letter has moved"
+  ],
+  "flag": "FLAG{welldoneteam}"
+}
+
