@@ -1,0 +1,16 @@
+{
+  "id": "hidden-message",
+  "title": "Hidden Message – Encoding",
+  "description": "You intercepted an encoded sentence. Use your knowledge of simple character shifts (Caesar cipher) to decode it.\n\nEncoded message:\n```\nUifsf jt b tfdsfu nfttbhf\n```\n\nHints:\n1. Notice the most frequent letter is f. In English, the most common letter is e.\n2. Think about shifting letters backward and wrapping around the alphabet.\n3. Once decoded, the sentence reveals the hidden flag.",
+  "points": 60,
+  "links": [
+    "https://www.dcode.fr/caesar-cipher"
+  ],
+  "hints": [
+    "It's a classic Caesar shift cipher. Try shifting letters backward.",
+    "Think about how the alphabet wraps around when you reach the beginning or the end.",
+    "Decoding the frequent letter \"f\" into the most common English letter \"e\" helps you find the correct shift."
+  ],
+  "flag": "FLAG{There is a secret message}"
+}
+

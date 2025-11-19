@@ -53,8 +53,24 @@ export async function POST(
       )
     }
 
-    // Check flag
-    const isCorrect = flag.trim() === ctf.flag.trim()
+    const normalizeFlag = (value: string) =>
+      value
+        .trim()
+        .replace(/^flag\{/i, '')
+        .replace(/\}$/i, '')
+        .trim()
+
+    const providedFlag = flag?.toString().trim() || ''
+    const correctFlag = ctf.flag.trim()
+
+    // Check flag (allow submissions with or without FLAG{} wrapper, case-insensitive)
+    const isExactMatch =
+      providedFlag.toLowerCase() === correctFlag.toLowerCase()
+    const isNormalizedMatch =
+      normalizeFlag(providedFlag).toLowerCase() ===
+      normalizeFlag(correctFlag).toLowerCase()
+
+    const isCorrect = isExactMatch || isNormalizedMatch
 
     if (isCorrect) {
       // Calculate time taken (in seconds)

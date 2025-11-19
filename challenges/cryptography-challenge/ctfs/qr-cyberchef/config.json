@@ -1,0 +1,17 @@
+{
+  "id": "qr-cyberchef",
+  "title": "QR CyberChef Challenge",
+  "description": "Follow these steps to uncover the hidden flag using CyberChef:\n\n1. Open CyberChef: https://gchq.github.io/CyberChef/\n2. Drag the provided QR code into the input field.\n3. Add 'Parse QR Code' to extract data. This step helps us read a QR code and extract the information from it.\n4. Add 'From Base64' from the operations. This step turns special text (Base64) into another format.\n5. Add 'From Binary' from the operations. This step changes a code made of 1s and 0s (Binary) into regular words.\n6. Add 'XOR' with key: supersecret. Here, we will mix our information using a supersecret word to keep it safe.\n7. Add 'From Hex' to convert the output. This step converts special numbers (Hex) into regular words.\n8. Add 'Caesar Box Cipher' with Box Height: 3. We’ll arrange our text into boxes that are 3 rows high to create a secret message.\n9. Find the flag in the output.\n\nFollow the steps carefully to reveal the secret flag.",
+  "points": 120,
+  "links": [
+    "https://gchq.github.io/CyberChef/",
+    "https://cyber.kent.ac.uk/events/CyberFirst/Girls_Development_Day_20241008/qrcode.png"
+  ],
+  "hints": [
+    "Import the QR image directly into CyberChef rather than trying to scan it elsewhere.",
+    "Use the XOR key exactly as `supersecret` (all lowercase, no spaces).",
+    "If the final text looks jumbled, reapply the Caesar Box Cipher with a box height of 3."
+  ],
+  "flag": "FLAG{CTFisfun}"
+}
+
