@@ -42,3 +42,45 @@ test('web-basics-challenge and ctfs exist', () => {
     assert.ok(ctfConfig.flag.startsWith('FLAG{'), `${ctfId} should define a flag`)
   })
 })
+
+test('team deletion API restricts access to test team', () => {
+  const apiPath = path.join(__dirname, '..', 'app', 'api', 'teams', '[teamId]', 'route.ts')
+  const source = fs.readFileSync(apiPath, 'utf8')
+
+  assert.ok(
+    source.includes("requester.name.toLowerCase() !== 'test'"),
+    'DELETE /api/teams/[teamId] should restrict access to the test team'
+  )
+})
+
+test('dashboard includes remove button handler for test team', () => {
+  const dashboardPath = path.join(__dirname, '..', 'app', 'dashboard', 'page.tsx')
+  const source = fs.readFileSync(dashboardPath, 'utf8')
+
+  assert.ok(
+    source.includes('handleRemoveTeam'),
+    'Dashboard should have a handler for removing teams'
+  )
+  assert.ok(
+    source.includes('Remove'),
+    'Dashboard should render a remove button for eligible teams'
+  )
+})
+
+test('leaderboard fullscreen toggle exists for test team', () => {
+  const dashboardPath = path.join(__dirname, '..', 'app', 'dashboard', 'page.tsx')
+  const source = fs.readFileSync(dashboardPath, 'utf8')
+
+  assert.ok(
+    source.includes('Fullscreen'),
+    'Dashboard should include a button to enter fullscreen leaderboard mode'
+  )
+  assert.ok(
+    source.includes('Exit Fullscreen'),
+    'Dashboard should include text for exiting fullscreen leaderboard mode'
+  )
+  assert.ok(
+    source.includes('setIsLeaderboardFullScreen'),
+    'Dashboard should toggle fullscreen state with setIsLeaderboardFullScreen'
+  )
+})

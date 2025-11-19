@@ -143,6 +143,26 @@ const db = {
       }
       return 0
     },
+    delete: (id: number): boolean => {
+      const teams = readTeams()
+      const exists = teams.some((t) => t.id === id)
+      if (!exists) {
+        return false
+      }
+
+      writeTeams(teams.filter((t) => t.id !== id))
+
+      const access = readChallengeAccess()
+      writeChallengeAccess(access.filter((a) => a.team_id !== id))
+
+      const attempts = readCTFAttempts()
+      writeCTFAttempts(attempts.filter((a) => a.team_id !== id))
+
+      const purchases = readHintPurchases()
+      writeHintPurchases(purchases.filter((p) => p.team_id !== id))
+
+      return true
+    },
   },
   challengeAccess: {
     create: (team_id: number, challenge_id: string) => {
