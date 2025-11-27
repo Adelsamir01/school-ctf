@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
+import { getCtfKey, getEmojiForKey } from '@/lib/ctfEmojis'
 import { cookies } from 'next/headers'
 
 function calculateTotalTime(teamId: number): number {
@@ -32,10 +33,38 @@ export async function GET(request: NextRequest) {
     const visibleTeams = teams.filter(t => t.name.toLowerCase() !== 'superuser')
     
     // Calculate total time for each team and add to team data
-    const teamsWithTime = visibleTeams.map(t => ({
-      ...t,
-      total_time: calculateTotalTime(t.id),
-    }))
+    const teamsWithTime = visibleTeams.map(t => {
+      const total_time = calculateTotalTime(t.id)
+      const completedAttempts = db.ctfAttempts
+        .getCompletedByTeam(t.id)
+        .filter((attempt) => attempt.completed === 1 && attempt.end_time)
+        .sort((a, b) => {
+          const aTime = new Date(a.end_time as string).getTime()
+          const bTime = new Date(b.end_time as string).getTime()
+          return aTime - bTime
+        })
+
+      const seenKeys = new Set<string>()
+      const completedCtfs: string[] = []
+
+      for (const attempt of completedAttempts) {
+        const key = getCtfKey(attempt.challenge_id, attempt.ctf_id)
+        if (seenKeys.has(key)) {
+          continue
+        }
+        seenKeys.add(key)
+        const emoji = getEmojiForKey(key)
+        if (emoji) {
+          completedCtfs.push(emoji)
+        }
+      }
+
+      return {
+        ...t,
+        total_time,
+        completedCtfs,
+      }
+    })
 
     // Sort by points (descending), then by time (ascending - lower time is better)
     teamsWithTime.sort((a, b) => {
@@ -46,14 +75,16 @@ export async function GET(request: NextRequest) {
       return a.total_time - b.total_time
     })
 
-    return NextResponse.json(
-      teamsWithTime.map(t => ({
+    return NextResponse.json({
+      teams: teamsWithTime.map(t => ({
         id: t.id,
         name: t.name,
         total_points: t.total_points,
         total_time: t.total_time,
-      }))
-    )
+        completedCtfs: t.completedCtfs,
+      })),
+      timer: db.leaderboardTimer.getStatus(),
+    })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to get leaderboard' },

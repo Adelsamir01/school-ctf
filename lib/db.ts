@@ -6,6 +6,7 @@ const teamsFile = path.join(dataDir, 'teams.json')
 const challengeAccessFile = path.join(dataDir, 'challenge_access.json')
 const ctfAttemptsFile = path.join(dataDir, 'ctf_attempts.json')
 const hintPurchasesFile = path.join(dataDir, 'hint_purchases.json')
+const leaderboardTimerFile = path.join(dataDir, 'leaderboard_timer.json')
 
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
@@ -24,6 +25,12 @@ if (!fs.existsSync(ctfAttemptsFile)) {
 }
 if (!fs.existsSync(hintPurchasesFile)) {
   fs.writeFileSync(hintPurchasesFile, '[]')
+}
+if (!fs.existsSync(leaderboardTimerFile)) {
+  fs.writeFileSync(
+    leaderboardTimerFile,
+    JSON.stringify({ started_at: null, duration_seconds: 0 }, null, 2)
+  )
 }
 
 interface Team {
@@ -62,6 +69,18 @@ interface HintPurchase {
   purchased_at: string
 }
 
+interface LeaderboardTimerState {
+  started_at: string | null
+  duration_seconds: number
+}
+
+interface LeaderboardTimerStatus {
+  startedAt: string
+  durationSeconds: number
+  remainingSeconds: number
+  isActive: boolean
+}
+
 function readTeams(): Team[] {
   return JSON.parse(fs.readFileSync(teamsFile, 'utf-8'))
 }
@@ -92,6 +111,37 @@ function readHintPurchases(): HintPurchase[] {
 
 function writeHintPurchases(purchases: HintPurchase[]) {
   fs.writeFileSync(hintPurchasesFile, JSON.stringify(purchases, null, 2))
+}
+
+function readLeaderboardTimer(): LeaderboardTimerState {
+  return JSON.parse(fs.readFileSync(leaderboardTimerFile, 'utf-8'))
+}
+
+function writeLeaderboardTimer(state: LeaderboardTimerState) {
+  fs.writeFileSync(leaderboardTimerFile, JSON.stringify(state, null, 2))
+}
+
+function getLeaderboardTimerStatus(
+  state: LeaderboardTimerState
+): LeaderboardTimerStatus | null {
+  if (!state.started_at || state.duration_seconds <= 0) {
+    return null
+  }
+
+  const startedAt = state.started_at
+  const durationSeconds = state.duration_seconds
+  const startedMs = new Date(startedAt).getTime()
+  const nowMs = Date.now()
+
+  const elapsed = Math.floor((nowMs - startedMs) / 1000)
+  const remainingSeconds = Math.max(0, durationSeconds - elapsed)
+
+  return {
+    startedAt,
+    durationSeconds,
+    remainingSeconds,
+    isActive: remainingSeconds > 0,
+  }
 }
 
 const db = {
@@ -308,6 +358,38 @@ const db = {
             p.challenge_id === challenge_id
         )
         .map(p => p.hint_index)
+    },
+  },
+  leaderboardTimer: {
+    get: (): LeaderboardTimerState => {
+      return readLeaderboardTimer()
+    },
+    set: (state: LeaderboardTimerState) => {
+      writeLeaderboardTimer(state)
+    },
+    clear: () => {
+      writeLeaderboardTimer({ started_at: null, duration_seconds: 0 })
+    },
+    getStatus: (): LeaderboardTimerStatus | null => {
+      return getLeaderboardTimerStatus(readLeaderboardTimer())
+    },
+    extend: (additionalSeconds: number): LeaderboardTimerStatus => {
+      const state = readLeaderboardTimer()
+      if (!state.started_at || state.duration_seconds <= 0) {
+        throw new Error('No active timer to extend')
+      }
+
+      const updatedState = {
+        ...state,
+        duration_seconds: state.duration_seconds + additionalSeconds,
+      }
+
+      writeLeaderboardTimer(updatedState)
+      const status = getLeaderboardTimerStatus(updatedState)
+      if (!status) {
+        throw new Error('Failed to extend timer')
+      }
+      return status
     },
   },
 }

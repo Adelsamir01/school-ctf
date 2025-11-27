@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { FormEvent, MouseEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,14 @@ interface Team {
   name: string
   total_points: number
   total_time: number
+  completedCtfs?: string[]
+}
+
+interface TimerStatus {
+  startedAt: string
+  durationSeconds: number
+  remainingSeconds: number
+  isActive: boolean
 }
 
 interface Challenge {
@@ -35,15 +43,45 @@ export default function DashboardPage() {
   const [team, setTeam] = useState<Team | null>(null)
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [leaderboard, setLeaderboard] = useState<Team[]>([])
+  const [timer, setTimer] = useState<TimerStatus | null>(null)
+  const [timerRemaining, setTimerRemaining] = useState<number | null>(null)
+  const [timerMinutes, setTimerMinutes] = useState('')
+  const [timerSubmitting, setTimerSubmitting] = useState(false)
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [removingTeamId, setRemovingTeamId] = useState<number | null>(null)
   const [isLeaderboardFullScreen, setIsLeaderboardFullScreen] = useState(false)
+  const [refreshingLeaderboard, setRefreshingLeaderboard] = useState(false)
+  const [addingTime, setAddingTime] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (!timer) {
+      setTimerRemaining(null)
+      return
+    }
+
+    const startedAtMs = new Date(timer.startedAt).getTime()
+    const initialRemaining = Math.max(
+      0,
+      timer.durationSeconds - Math.floor((Date.now() - startedAtMs) / 1000)
+    )
+    setTimerRemaining(initialRemaining)
+
+    const interval = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startedAtMs) / 1000)
+      const remaining = Math.max(0, timer.durationSeconds - elapsed)
+      setTimerRemaining(remaining)
+    }, 1000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [timer])
 
   useEffect(() => {
     if (isLeaderboardFullScreen) {
@@ -132,11 +170,18 @@ export default function DashboardPage() {
         })
       )
       const leaderboardData = await leaderboardRes.json()
+      const teamsData = Array.isArray(leaderboardData)
+        ? leaderboardData
+        : leaderboardData.teams || []
+      const timerData = Array.isArray(leaderboardData)
+        ? null
+        : leaderboardData.timer || null
       const eventData = await eventRes.json()
 
       setTeam(teamData)
       setChallenges(challengesWithProgress)
-      setLeaderboard(leaderboardData)
+      setLeaderboard(teamsData)
+      setTimer(timerData)
       setEvent(eventData)
     } catch (error) {
       console.error('Failed to load data:', error)
@@ -153,6 +198,94 @@ export default function DashboardPage() {
       router.push('/event')
     } catch (error) {
       console.error('Failed to sign out:', error)
+    }
+  }
+
+  const handleStartTimer = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const minutesValue = parseFloat(timerMinutes)
+
+    if (!Number.isFinite(minutesValue) || minutesValue <= 0) {
+      alert('Enter a positive number of minutes')
+      return
+    }
+
+    setTimerSubmitting(true)
+    try {
+      const res = await fetch('/api/leaderboard/timer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ minutes: minutesValue }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to start timer')
+        return
+      }
+
+      const data = await res.json()
+      setTimer(data.timer || null)
+      setTimerMinutes('')
+    } catch (error) {
+      console.error('Failed to start timer:', error)
+      alert('Failed to start timer')
+    } finally {
+      setTimerSubmitting(false)
+    }
+  }
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const isTimerActive = timerRemaining !== null && timerRemaining > 0
+  const timerLabel =
+    timerRemaining === null
+      ? '🕒 No active countdown'
+      : timerRemaining > 0
+      ? `⏱️ ${formatCountdown(timerRemaining)} remaining`
+      : '⌛️ Time is up'
+
+  const handleRefreshLeaderboard = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    setRefreshingLeaderboard(true)
+    try {
+      await loadData()
+    } finally {
+      setRefreshingLeaderboard(false)
+    }
+  }
+
+  const handleAddFiveMinutes = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    setAddingTime(true)
+    try {
+      const res = await fetch('/api/leaderboard/timer', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ minutes: 5 }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to add time')
+        return
+      }
+
+      const data = await res.json()
+      setTimer(data.timer || null)
+    } catch (error) {
+      console.error('Failed to add time:', error)
+      alert('Failed to add time')
+    } finally {
+      setAddingTime(false)
     }
   }
 
@@ -279,23 +412,91 @@ export default function DashboardPage() {
             }`}
           >
             <div
-              className={`flex items-center justify-between mb-4 ${
+              className={`flex flex-col gap-3 mb-4 ${
                 isLeaderboardFullScreen ? 'sticky top-0 bg-white py-2 border-b border-gray-100 z-10' : ''
               }`}
             >
-              <h2 className="text-2xl font-bold text-gray-800">
-                🏆 Leaderboard
-              </h2>
-              {isSuperUser && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsLeaderboardFullScreen(!isLeaderboardFullScreen)
-                  }}
-                  className="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full font-semibold transition"
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-2xl font-bold text-gray-800">🏆 Leaderboard</span>
+                  <span
+                    className={`text-2xl font-bold ${
+                      timerRemaining === null
+                        ? 'text-gray-700'
+                        : timerRemaining > 0
+                        ? 'text-purple-600'
+                        : 'text-rose-600'
+                    }`}
+                  >
+                    {timerLabel}
+                  </span>
+                  {isSuperUser && isTimerActive && (
+                    <button
+                      onClick={handleAddFiveMinutes}
+                      disabled={addingTime}
+                      aria-label="Add five minutes"
+                      title="Add five minutes"
+                      className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold transition hover:bg-green-200 disabled:opacity-50"
+                    >
+                      +5
+                    </button>
+                  )}
+                </div>
+                {isSuperUser && (
+                  <div className="flex items-center gap-2 flex-wrap ml-auto">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsLeaderboardFullScreen(!isLeaderboardFullScreen)
+                      }}
+                      aria-label={
+                        isLeaderboardFullScreen
+                          ? 'Exit fullscreen leaderboard'
+                          : 'Enter fullscreen leaderboard'
+                      }
+                      title={
+                        isLeaderboardFullScreen
+                          ? 'Exit fullscreen leaderboard'
+                          : 'Enter fullscreen leaderboard'
+                      }
+                      className="text-lg bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full transition"
+                    >
+                      {isLeaderboardFullScreen ? '↩️' : '⛶'}
+                    </button>
+                    <button
+                      onClick={handleRefreshLeaderboard}
+                      disabled={refreshingLeaderboard}
+                      aria-label="Refresh leaderboard"
+                      title="Refresh leaderboard"
+                      className="text-lg bg-purple-100 text-purple-700 px-3 py-1 rounded-full transition hover:bg-purple-200 disabled:opacity-50"
+                    >
+                      {refreshingLeaderboard ? '…' : '🔄'}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {isSuperUser && !isTimerActive && (
+                <form
+                  className="flex flex-wrap items-center gap-2 text-sm justify-center"
+                  onSubmit={handleStartTimer}
                 >
-                  {isLeaderboardFullScreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                </button>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={timerMinutes}
+                    onChange={(e) => setTimerMinutes(e.target.value)}
+                    placeholder="Minutes"
+                    className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 w-28"
+                  />
+                  <button
+                    type="submit"
+                    disabled={timerSubmitting}
+                    className="bg-blue-100 text-blue-700 px-4 py-1 rounded-full font-semibold transition hover:bg-blue-200 disabled:opacity-50"
+                  >
+                    {timerSubmitting ? 'Starting...' : 'Start Timer'}
+                  </button>
+                </form>
               )}
             </div>
             <div
@@ -332,9 +533,19 @@ export default function DashboardPage() {
                         <span className="font-bold text-lg w-8 text-center">
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                         </span>
-                        <span className="font-semibold text-gray-800">
-                          {t.name}
-                        </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-gray-800">
+                    {t.name}
+                  </span>
+                  {t.completedCtfs && t.completedCtfs.length > 0 && (
+                    <span
+                      className="text-xl"
+                      aria-label="Solved questions"
+                    >
+                      {t.completedCtfs.join(' ')}
+                    </span>
+                  )}
+                </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
@@ -352,9 +563,14 @@ export default function DashboardPage() {
                               handleRemoveTeam(t.id, t.name)
                             }}
                             disabled={removingTeamId === t.id}
+                            aria-label={
+                              removingTeamId === t.id
+                                ? `Removing ${t.name}`
+                                : `Remove ${t.name}`
+                            }
                             className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold hover:bg-red-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {removingTeamId === t.id ? 'Removing...' : 'Remove'}
+                            {removingTeamId === t.id ? '…' : '🗑️'}
                           </button>
                         )}
                       </div>

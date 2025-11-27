@@ -62,8 +62,8 @@ test('dashboard includes remove button handler for superuser team', () => {
     'Dashboard should have a handler for removing teams'
   )
   assert.ok(
-    source.includes('Remove'),
-    'Dashboard should render a remove button for eligible teams'
+    source.includes('`Remove ${t.name}`'),
+    'Dashboard should render a remove control with accessible label'
   )
 })
 
@@ -72,15 +72,105 @@ test('leaderboard fullscreen toggle exists for superuser team', () => {
   const source = fs.readFileSync(dashboardPath, 'utf8')
 
   assert.ok(
-    source.includes('Fullscreen'),
-    'Dashboard should include a button to enter fullscreen leaderboard mode'
+    source.includes('Enter fullscreen leaderboard'),
+    'Dashboard should include control to enter fullscreen leaderboard mode'
   )
   assert.ok(
-    source.includes('Exit Fullscreen'),
-    'Dashboard should include text for exiting fullscreen leaderboard mode'
+    source.includes('Exit fullscreen leaderboard'),
+    'Dashboard should include control to exit fullscreen leaderboard mode'
   )
   assert.ok(
     source.includes('setIsLeaderboardFullScreen'),
     'Dashboard should toggle fullscreen state with setIsLeaderboardFullScreen'
+  )
+})
+
+test('leaderboard API exposes completedCtfs data', () => {
+  const apiPath = path.join(
+    __dirname,
+    '..',
+    'app',
+    'api',
+    'teams',
+    'leaderboard',
+    'route.ts'
+  )
+  const source = fs.readFileSync(apiPath, 'utf8')
+
+  assert.ok(
+    source.includes('completedCtfs'),
+    'Leaderboard API should include completedCtfs for solved questions'
+  )
+  assert.ok(
+    source.includes('getEmojiForKey'),
+    'Leaderboard API should map solved questions to emoji order'
+  )
+  assert.ok(
+    source.includes('timer:'),
+    'Leaderboard API should include timer payload'
+  )
+})
+
+test('ctf emoji mapping includes all circle colors', () => {
+  const emojiPath = path.join(__dirname, '..', 'lib', 'ctfEmojis.ts')
+  const source = fs.readFileSync(emojiPath, 'utf8')
+  const requiredEmojis = ['🔴', '⚪️', '🔵', '🟡', '🟣', '🟢', '⚫️', '🟠']
+
+  requiredEmojis.forEach((emoji) => {
+    assert.ok(source.includes(emoji), `Emoji map should include ${emoji}`)
+  })
+})
+
+test('leaderboard timer route restricts to superuser', () => {
+  const timerPath = path.join(
+    __dirname,
+    '..',
+    'app',
+    'api',
+    'leaderboard',
+    'timer',
+    'route.ts'
+  )
+  const source = fs.readFileSync(timerPath, 'utf8')
+
+  assert.ok(
+    source.includes('Only the superuser team can start the timer'),
+    'Timer route should enforce superuser access'
+  )
+  assert.ok(
+    source.includes('Only the superuser team can add time'),
+    'Timer route should restrict add time to superuser'
+  )
+  assert.ok(
+    source.includes('Minutes must be a positive number'),
+    'Timer route should validate minutes input'
+  )
+  assert.ok(
+    source.includes('PATCH'),
+    'Timer route should support extending timer through PATCH'
+  )
+})
+
+test('dashboard renders countdown UI with emojis', () => {
+  const dashboardPath = path.join(__dirname, '..', 'app', 'dashboard', 'page.tsx')
+  const source = fs.readFileSync(dashboardPath, 'utf8')
+
+  assert.ok(
+    source.includes('No active countdown'),
+    'Dashboard should mention countdown status'
+  )
+  assert.ok(source.includes('⏱️'), 'Dashboard should include timer emoji display')
+  assert.ok(
+    source.includes('Start Timer'),
+    'Dashboard should include a Start Timer control for superuser'
+  )
+  assert.ok(
+    source.includes('aria-label="Refresh leaderboard"'),
+    'Dashboard should provide a refresh control for superuser'
+  )
+  assert.ok(source.includes('+5'), 'Dashboard should provide a +5 time control')
+  assert.ok(
+    source.includes('aria-label="Add five minutes"'),
+    'Dashboard should describe the add time control for accessibility'
   )
 })

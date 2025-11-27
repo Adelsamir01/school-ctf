@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import { getEmojiForCtf } from '@/lib/ctfEmojis'
 
 interface Challenge {
   id: string
@@ -18,6 +19,7 @@ interface CTF {
   points: number
   completed: boolean
   pointsEarned: number
+  emoji?: string
 }
 
 export default function ChallengePage() {
@@ -55,7 +57,12 @@ export default function ChallengePage() {
       const res = await fetch(`/api/challenges/${params.id}/ctfs`)
       if (res.ok) {
         const data = await res.json()
-        setCtfs(data)
+        const challengeId = String(params.id)
+        const decorated = data.map((ctf: CTF) => ({
+          ...ctf,
+          emoji: getEmojiForCtf(challengeId, ctf.id),
+        }))
+        setCtfs(decorated)
       }
     } catch (error) {
       console.error('Failed to load CTFs:', error)
@@ -107,6 +114,11 @@ export default function ChallengePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                      {ctf.emoji && (
+                        <span className="mr-2" aria-hidden="true">
+                          {ctf.emoji}
+                        </span>
+                      )}
                       {ctf.title}
                     </h2>
                     <p className="text-gray-600 mb-3 line-clamp-2">
